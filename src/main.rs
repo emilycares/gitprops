@@ -1,13 +1,21 @@
 mod config;
 mod finder;
 use clap::Parser;
-use config::Args;
+use config::{Args, Author};
 use git2::Repository;
 
 fn main() {
     let args = Args::parse();
     if args.ui {
-        finder::ui().unwrap();
+        let authors = vec![
+            Author::new("Bob", "bob@gmail.com"),
+            Author::new("John", "john@gmail.com"),
+            Author::new("Alice", "alice@gmail.com"),
+        ];
+        finder::ui(authors, |a| {
+            dbg!(a);
+        })
+        .unwrap();
     }
     if false {
         let Ok(repo) = Repository::open("./") else {
