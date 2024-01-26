@@ -32,15 +32,13 @@ fn main() {
         let authors = mark_present(authors, existing_authors);
         let a = finder::ui(authors);
         if let Ok(a) = a {
-            if let Some(a) = a.first() {
-                let message = format_commit_message(message, vec![a]);
-                set_commit_message(commit, message);
-            }
+            let message = format_commit_message(message, a);
+            set_commit_message(commit, message);
         }
     } else {
         let message = format_commit_message(
             message,
-            vec![&Author {
+            vec![Author {
                 name: args.name,
                 email: args.email,
                 staged: false,
@@ -68,7 +66,7 @@ fn set_commit_message<'a>(commit: git2::Commit<'a>, message: String) {
     }
 }
 
-fn format_commit_message<'a>(message: &'a str, authors: Vec<&Author>) -> String {
+fn format_commit_message<'a>(message: &'a str, authors: Vec<Author>) -> String {
     let mut msg: String = message
         .lines()
         .filter(|c| !c.contains("Co-authored-by"))
@@ -109,7 +107,7 @@ mod tests {
     #[test]
     fn format_commit_message_add() {
         let message = "supper change";
-        let result = format_commit_message(message, vec![&Author::new("me", "doNotLook")]);
+        let result = format_commit_message(message, vec![Author::new("me", "doNotLook")]);
         assert_eq!(result, "supper change\nCo-authored-by: me <doNotLook>");
     }
 
@@ -119,8 +117,8 @@ mod tests {
         let result = format_commit_message(
             message,
             vec![
-                &Author::new("me", "doNotLook"),
-                &Author::new("notMe", "neveeSeen"),
+                Author::new("me", "doNotLook"),
+                Author::new("notMe", "neveeSeen"),
             ],
         );
         assert_eq!(
@@ -135,8 +133,8 @@ mod tests {
         let result = format_commit_message(
             message,
             vec![
-                &Author::new("me", "doNotLook"),
-                &Author::new("notMe", "neveeSeen"),
+                Author::new("me", "doNotLook"),
+                Author::new("notMe", "neveeSeen"),
             ],
         );
         assert_eq!(
@@ -149,7 +147,7 @@ mod tests {
     fn format_commit_message_remove_one() {
         let message =
             "supper change\nCo-authored-by: me <doNotLook>\nCo-authored-by: notMe <neveeSeen>";
-        let result = format_commit_message(message, vec![&Author::new("me", "doNotLook")]);
+        let result = format_commit_message(message, vec![Author::new("me", "doNotLook")]);
         assert_eq!(result, "supper change\nCo-authored-by: me <doNotLook>");
     }
     #[test]

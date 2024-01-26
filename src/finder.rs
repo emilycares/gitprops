@@ -34,7 +34,10 @@ pub fn ui<'a>(input: Vec<Author>) -> Result<Vec<Author>> {
                 Event::Key(m) => {
                     if m.kind == KeyEventKind::Press {
                         match m.code {
-                            KeyCode::Esc => break 'ui,
+                            KeyCode::Esc => {
+                                filtered_authors = vec![];
+                                break 'ui
+                            },
                             KeyCode::Char(' ') => {
                                 let s = filtered_authors.get(selected);
                                 if s.is_some() {
