@@ -85,10 +85,9 @@ pub fn ui<'a>(input: Vec<Author>, fout: fn(Option<&Author>)) -> Result<()> {
         let lines = render_canvas(&theight, &twith, &search, &selected, &filtered_authors);
         stdout.queue(terminal::Clear(terminal::ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
-        for (i, line) in lines.iter().enumerate() {
+        for line in lines.iter() {
             stdout.queue(cursor::MoveToNextLine(1))?;
             stdout.write(line.as_bytes())?;
-            stdout.write(i.to_string().as_bytes())?;
         }
         stdout.flush()?;
 
