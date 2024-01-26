@@ -11,7 +11,7 @@ pub struct Args {
     pub email: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Author {
     pub name: String,
     pub email: String,

@@ -19,13 +19,13 @@ use crossterm::{
 
 use crate::config::Author;
 
-pub fn ui<'a>(input: Vec<Author>, fout: fn(Option<&Author>)) -> Result<()> {
+pub fn ui<'a>(input: Vec<Author>) -> Result<Vec<Author>> {
     let (mut theight, mut twith) = terminal::size()?;
     setup_ui()?;
     let mut stdout = stdout();
 
     let mut search = Box::new(String::new());
-    let mut filtered_authors = filter_authors(&input, &search);
+    let mut filtered_authors = filter_authors(input.clone(), search.to_string());
     let mut selected: usize = 0;
 
     'ui: loop {
@@ -38,13 +38,13 @@ pub fn ui<'a>(input: Vec<Author>, fout: fn(Option<&Author>)) -> Result<()> {
                             KeyCode::Char(' ') => {
                                 let s = filtered_authors.get(selected);
                                 if s.is_some() {
-                                    fout(s.map(|a| *a));
+                                    //fout(s.map(|a| *a));
                                     break 'ui;
                                 }
                             }
                             KeyCode::Char(c) => {
                                 search.push(c);
-                                filtered_authors = filter_authors(&input, &search);
+                                filtered_authors = filter_authors(input.clone(), search.to_string());
                                 let len = filtered_authors.len();
                                 if len > 1 {
                                     let last = len - 1;
@@ -58,7 +58,7 @@ pub fn ui<'a>(input: Vec<Author>, fout: fn(Option<&Author>)) -> Result<()> {
                             }
                             KeyCode::Backspace => {
                                 search.pop();
-                                filtered_authors = filter_authors(&input, &search);
+                                filtered_authors = filter_authors(input.clone(), search.to_string());
                             }
                             KeyCode::Up => {
                                 if selected != usize::MIN {
@@ -82,7 +82,7 @@ pub fn ui<'a>(input: Vec<Author>, fout: fn(Option<&Author>)) -> Result<()> {
             }
         }
 
-        let lines = render_canvas(&theight, &twith, &search, &selected, &filtered_authors);
+        let lines = render_canvas(&theight, &twith, &search, &selected, filtered_authors.clone());
         stdout.queue(terminal::Clear(terminal::ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
         for line in lines.iter() {
@@ -94,13 +94,13 @@ pub fn ui<'a>(input: Vec<Author>, fout: fn(Option<&Author>)) -> Result<()> {
         thread::sleep(Duration::from_millis(10));
     }
     teardown_ui()?;
-    Ok(())
+    Ok(filtered_authors)
 }
 
-fn filter_authors<'a>(authors: &'a Vec<Author>, search: &'a str) -> Vec<&'a Author> {
+fn filter_authors<'a>(authors: Vec<Author>, search: String) -> Vec<Author> {
     return authors
-        .iter()
-        .filter(|c| c.name.to_lowercase().contains(search))
+        .into_iter()
+        .filter(|c| c.name.to_lowercase().contains(&search))
         .collect();
 }
 
@@ -109,14 +109,14 @@ fn render_canvas(
     _twith: &u16,
     search: &str,
     selected: &usize,
-    authors: &Vec<&Author>,
+    authors: Vec<Author>,
 ) -> Vec<String> {
     let mut out = vec![format!("Search: {search}")];
     out.extend(render_authors(authors, selected));
     out
 }
 
-fn render_authors(authors: &Vec<&Author>, selected: &usize) -> Vec<String> {
+fn render_authors(authors: Vec<Author>, selected: &usize) -> Vec<String> {
     authors
         .iter()
         .enumerate()

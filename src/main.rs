@@ -6,8 +6,21 @@ use git2::Repository;
 
 fn main() {
     let args = Args::parse();
-    let Some((commit, message)) = get_commit() else {
+    let Ok(repo) = Repository::open("./") else {
+        println!("failed to open repo");
         return;
+    };
+    let Ok(head) = repo.head() else {
+        println!("Unable to get head");
+        return;
+    };
+    let Ok(commit) = head.peel_to_commit() else {
+        println!("Unable to get last commit");
+        return;
+    };
+    let message = match commit.message() {
+        Some(msg) => msg,
+        None => "",
     };
     if args.ui {
         let authors = vec![
@@ -17,13 +30,13 @@ fn main() {
         ];
         let existing_authors = parse_authors(message);
         let authors = mark_present(authors, existing_authors);
-        finder::ui(authors, |a| {
-            if let Some(a) = a {
+        let a = finder::ui(authors);
+        if let Ok(a) = a {
+            if let Some(a) = a.first() {
                 let message = format_commit_message(message, vec![a]);
                 set_commit_message(commit, message);
             }
-        })
-        .unwrap();
+        }
     } else {
         let message = format_commit_message(
             message,
@@ -35,26 +48,6 @@ fn main() {
         );
         set_commit_message(commit, message);
     }
-}
-
-fn get_commit<'a>() -> Option<(git2::Commit<'a>, &'a str)> {
-    let Ok(repo) = Repository::open("./") else {
-        println!("failed to open repo");
-        return None;
-    };
-    let Ok(head) = repo.head() else {
-        println!("Unable to get head");
-        return None;
-    };
-    let Ok(commit) = head.peel_to_commit() else {
-        println!("Unable to get last commit");
-        return None;
-    };
-    let message = match commit.message() {
-        Some(msg) => msg,
-        None => "",
-    };
-    Some((commit, message))
 }
 
 fn mark_present(authors: Vec<Author>, existing_authors: Vec<&str>) -> Vec<Author> {
