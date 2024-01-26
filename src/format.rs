@@ -1,6 +1,5 @@
 use crate::config::Author;
 
-
 pub fn format_commit_message<'a>(message: &'a str, authors: Vec<Author>) -> String {
     let mut msg: String = message
         .lines()
@@ -28,7 +27,10 @@ pub fn parse_authors<'a>(message: &'a str) -> Vec<&'a str> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{config::Author, format::{format_commit_message, parse_authors}};
+    use crate::{
+        config::Author,
+        format::{format_commit_message, parse_authors},
+    };
 
     #[test]
     fn parse_authors_basic() {

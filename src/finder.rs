@@ -19,7 +19,7 @@ use crossterm::{
 
 use crate::config::Author;
 
-pub fn ui<'a>(input: Vec<Author>) -> Result<Vec<Author>> {
+pub fn ui<'a>(mut input: Vec<Author>) -> Result<Vec<Author>> {
     let (mut theight, mut twith) = terminal::size()?;
     setup_ui()?;
     let mut stdout = stdout();
@@ -36,12 +36,29 @@ pub fn ui<'a>(input: Vec<Author>) -> Result<Vec<Author>> {
                     if m.kind == KeyEventKind::Press {
                         match m.code {
                             KeyCode::Esc => break 'ui,
-                            KeyCode::Char(' ') => {
+                            KeyCode::Enter => {
                                 let s = filtered_authors.get(selected);
                                 if s.is_some() {
                                     selected_author = s.cloned();
                                     //fout(s.map(|a| *a));
                                     break 'ui;
+                                }
+                            }
+                            KeyCode::Char(' ') => {
+                                if let Some(s) = filtered_authors.get(selected) {
+                                    input = input
+                                        .into_iter()
+                                        .map(|mut a| {
+                                            if a.name == s.name {
+                                                if a.email == s.email {
+                                                    a.staged = !a.staged;
+                                                }
+                                            }
+                                            a
+                                        })
+                                        .collect();
+                                    filtered_authors =
+                                        filter_authors(input.clone(), search.to_string());
                                 }
                             }
                             KeyCode::Char(c) => {
@@ -104,7 +121,7 @@ pub fn ui<'a>(input: Vec<Author>) -> Result<Vec<Author>> {
         thread::sleep(Duration::from_millis(10));
     }
     teardown_ui()?;
-    Ok(selected_author.into_iter().collect())
+    Ok(input.into_iter().filter(|a| a.staged).collect())
 }
 
 fn filter_authors<'a>(authors: Vec<Author>, search: String) -> Vec<Author> {

@@ -68,4 +68,3 @@ fn set_commit_message<'a>(commit: git2::Commit<'a>, message: String) {
         Err(_) => println!("Unable to edit commit"),
     }
 }
-
