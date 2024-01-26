@@ -6,15 +6,15 @@ use git2::Repository;
 
 fn main() {
     let args = Args::parse();
+    let Some((commit, message)) = get_commit() else {
+        return;
+    };
     if args.ui {
         let authors = vec![
             Author::new("Bob", "bob@gmail.com"),
             Author::new("John", "john@gmail.com"),
             Author::new("Alice", "alice@gmail.com"),
         ];
-        let Some((commit, message)) = get_commit() else {
-            return;
-        };
         let existing_authors = parse_authors(message);
         let authors = mark_present(authors, existing_authors);
         finder::ui(authors, |a| {
@@ -25,7 +25,6 @@ fn main() {
         })
         .unwrap();
     } else {
-        let (commit, message) = get_commit();
         let message = format_commit_message(
             message,
             vec![&Author {
@@ -144,7 +143,7 @@ mod tests {
             message,
             vec![
                 &Author::new("me", "doNotLook"),
-                Author::new("notMe", "neveeSeen"),
+                &Author::new("notMe", "neveeSeen"),
             ],
         );
         assert_eq!(
