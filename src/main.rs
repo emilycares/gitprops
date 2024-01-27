@@ -2,11 +2,21 @@ mod config;
 mod finder;
 mod format;
 use clap::Parser;
-use config::{Args, Author};
+use config::{Args, Author, Storage};
 use git2::Repository;
 
-fn main() {
+#[tokio::main()]
+async fn main() {
     let args = Args::parse();
+    let storage_location = &quickcfg::get_location("gitprops")
+        .await
+        .expect("Unable to get storage dir");
+    let storage: Storage = quickcfg::load(storage_location).await;
+
+    if args.print_config_location {
+        println!("{}", storage_location);
+        return;
+    }
     let Ok(repo) = Repository::open("./") else {
         println!("failed to open repo");
         return;
@@ -19,33 +29,14 @@ fn main() {
         println!("Unable to get last commit");
         return;
     };
-    let message = match commit.message() {
-        Some(msg) => msg,
-        None => "",
-    };
-    if args.ui {
-        let authors = vec![
-            Author::new("Bob", "bob@gmail.com"),
-            Author::new("John", "john@gmail.com"),
-            Author::new("Alice", "alice@gmail.com"),
-        ];
-        let existing_authors = format::parse_authors(message);
-        let authors = mark_present(authors, existing_authors);
-        let a = finder::ui(authors);
-        if let Ok(a) = a {
-            let message = format::format_commit_message(message, a);
-            println!("{}", message);
-            set_commit_message(commit, message);
-        }
-    } else {
-        let message = format::format_commit_message(
-            message,
-            vec![Author {
-                name: args.name,
-                email: args.email,
-                staged: false,
-            }],
-        );
+    let message = commit.message().unwrap_or("");
+    let authors: Vec<Author> = storage.authors.into_iter().map(|a| a.into()).collect();
+
+    let existing_authors = format::parse_authors(message);
+    let authors = mark_present(authors, existing_authors);
+    let a = finder::ui(authors);
+    if let Ok(a) = a {
+        let message = format::format_commit_message(message, a);
         println!("{}", message);
         set_commit_message(commit, message);
     }
@@ -62,7 +53,7 @@ fn mark_present(authors: Vec<Author>, existing_authors: Vec<&str>) -> Vec<Author
         .collect();
 }
 
-fn set_commit_message<'a>(commit: git2::Commit<'a>, message: String) {
+fn set_commit_message(commit: git2::Commit<'_>, message: String) {
     match commit.amend(Some("HEAD"), None, None, None, Some(&message), None) {
         Ok(_) => (),
         Err(_) => println!("Unable to edit commit"),
