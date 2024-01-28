@@ -19,7 +19,7 @@ use crossterm::{
 
 use crate::config::Author;
 
-pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
+pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
     let (mut theight, mut twith) = terminal::size()?;
     setup_ui()?;
     let mut stdout = stdout();
@@ -28,6 +28,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
     let bind_authors = input.clone();
     let mut filtered_authors = filter_authors(&bind_authors, search.to_string());
     let mut selected: usize = 0;
+    let mut saved = false;
 
     'ui: loop {
         while poll(Duration::ZERO)? {
@@ -36,7 +37,10 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                     if m.kind == KeyEventKind::Press {
                         match m.code {
                             KeyCode::Esc => break 'ui,
-                            KeyCode::Enter => break 'ui,
+                            KeyCode::Enter => {
+                                saved = true;
+                                break 'ui
+                            },
                             KeyCode::Char('r') => {
                                 if m.modifiers.contains(KeyModifiers::CONTROL) {
                                     input = input
@@ -109,7 +113,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
             &twith,
             &search,
             &selected,
-            filtered_authors.clone(),
+            &filtered_authors,
         );
         stdout.queue(terminal::Clear(terminal::ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
@@ -118,13 +122,17 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
             stdout.write_all(line.as_bytes())?;
         }
         stdout.queue(cursor::MoveTo(0, theight))?;
-        stdout.write_all("Usage: <Esc>/<Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
+        stdout.write_all("Usage: <Esc>: Close <Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
         stdout.flush()?;
 
         thread::sleep(Duration::from_millis(10));
     }
     teardown_ui()?;
-    Ok(input.into_iter().filter(|a| a.staged).collect())
+    if saved {
+      Ok(Some(input.into_iter().filter(|a| a.staged).collect()))
+    } else {
+      Ok(None)
+    }
 }
 
 fn filter_authors(authors: &Vec<Author>, search: String) -> Vec<&Author> {
@@ -140,14 +148,14 @@ fn render_canvas(
     _twith: &u16,
     search: &str,
     selected: &usize,
-    authors: Vec<&Author>,
+    authors: &Vec<&Author>,
 ) -> Vec<String> {
     let mut out = vec![format!("Search: {search}")];
     out.extend(render_authors(authors, selected));
     out
 }
 
-fn render_authors(authors: Vec<&Author>, selected: &usize) -> Vec<String> {
+fn render_authors(authors: &Vec<&Author>, selected: &usize) -> Vec<String> {
     authors
         .iter()
         .enumerate()
