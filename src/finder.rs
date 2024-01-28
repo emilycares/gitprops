@@ -25,7 +25,8 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
     let mut stdout = stdout();
 
     let mut search = String::new();
-    let mut filtered_authors = filter_authors(input.clone(), search.to_string());
+    let bind_authors = input.clone();
+    let mut filtered_authors = filter_authors(&bind_authors, search.to_string());
     let mut selected: usize = 0;
 
     'ui: loop {
@@ -45,13 +46,13 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                                             a
                                         })
                                         .collect();
-                                    filtered_authors =
-                                        filter_authors(input.clone(), search.to_string());
+                                    filtered_authors = filter_authors(&input, search.to_string());
                                 }
                             }
                             KeyCode::Char(' ') => {
                                 if let Some(s) = filtered_authors.get(selected) {
                                     input = input
+                                        .clone()
                                         .into_iter()
                                         .map(|mut a| {
                                             if a.name == s.name && a.email == s.email {
@@ -60,14 +61,12 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                                             a
                                         })
                                         .collect();
-                                    filtered_authors =
-                                        filter_authors(input.clone(), search.to_string());
+                                    filtered_authors = filter_authors(&input, search.to_string());
                                 }
                             }
                             KeyCode::Char(c) => {
                                 search.push(c);
-                                filtered_authors =
-                                    filter_authors(input.clone(), search.to_string());
+                                filtered_authors = filter_authors(&input, search.to_string());
                                 let len = filtered_authors.len();
                                 if len > 1 {
                                     let last = len - 1;
@@ -81,8 +80,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                             }
                             KeyCode::Backspace => {
                                 search.pop();
-                                filtered_authors =
-                                    filter_authors(input.clone(), search.to_string());
+                                filtered_authors = filter_authors(&input, search.to_string());
                             }
                             KeyCode::Up => {
                                 if selected != usize::MIN {
@@ -129,7 +127,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
     Ok(input.into_iter().filter(|a| a.staged).collect())
 }
 
-fn filter_authors(authors: Vec<Author>, search: String) -> Vec<Author> {
+fn filter_authors(authors: &Vec<Author>, search: String) -> Vec<&Author> {
     let search = search.to_lowercase();
     authors
         .into_iter()
@@ -142,14 +140,14 @@ fn render_canvas(
     _twith: &u16,
     search: &str,
     selected: &usize,
-    authors: Vec<Author>,
+    authors: Vec<&Author>,
 ) -> Vec<String> {
     let mut out = vec![format!("Search: {search}")];
     out.extend(render_authors(authors, selected));
     out
 }
 
-fn render_authors(authors: Vec<Author>, selected: &usize) -> Vec<String> {
+fn render_authors(authors: Vec<&Author>, selected: &usize) -> Vec<String> {
     authors
         .iter()
         .enumerate()
