@@ -19,14 +19,16 @@ use crossterm::{
 
 use crate::config::Author;
 
-pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
+pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
     let (mut theight, mut twith) = terminal::size()?;
     setup_ui()?;
     let mut stdout = stdout();
 
     let mut search = String::new();
-    let mut filtered_authors = filter_authors(input.clone(), search.to_string());
+    let bind_authors = input.clone();
+    let mut filtered_authors = filter_authors(&bind_authors, search.to_string());
     let mut selected: usize = 0;
+    let mut saved = false;
 
     'ui: loop {
         while poll(Duration::ZERO)? {
@@ -35,23 +37,24 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                     if m.kind == KeyEventKind::Press {
                         match m.code {
                             KeyCode::Esc => break 'ui,
-                            KeyCode::Enter => break 'ui,
-                            KeyCode::Char('r') => {
-                                if m.modifiers.contains(KeyModifiers::CONTROL) {
-                                    input = input
-                                        .into_iter()
-                                        .map(|mut a| {
-                                            a.staged = false;
-                                            a
-                                        })
-                                        .collect();
-                                    filtered_authors =
-                                        filter_authors(input.clone(), search.to_string());
-                                }
+                            KeyCode::Enter => {
+                                saved = true;
+                                break 'ui;
+                            }
+                            KeyCode::Char('r') if m.modifiers.contains(KeyModifiers::CONTROL) => {
+                                input = input
+                                    .into_iter()
+                                    .map(|mut a| {
+                                        a.staged = false;
+                                        a
+                                    })
+                                    .collect();
+                                filtered_authors = filter_authors(&input, search.to_string());
                             }
                             KeyCode::Char(' ') => {
                                 if let Some(s) = filtered_authors.get(selected) {
                                     input = input
+                                        .clone()
                                         .into_iter()
                                         .map(|mut a| {
                                             if a.name == s.name && a.email == s.email {
@@ -60,14 +63,12 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                                             a
                                         })
                                         .collect();
-                                    filtered_authors =
-                                        filter_authors(input.clone(), search.to_string());
+                                    filtered_authors = filter_authors(&input, search.to_string());
                                 }
                             }
                             KeyCode::Char(c) => {
                                 search.push(c);
-                                filtered_authors =
-                                    filter_authors(input.clone(), search.to_string());
+                                filtered_authors = filter_authors(&input, search.to_string());
                                 let len = filtered_authors.len();
                                 if len > 1 {
                                     let last = len - 1;
@@ -81,8 +82,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                             }
                             KeyCode::Backspace => {
                                 search.pop();
-                                filtered_authors =
-                                    filter_authors(input.clone(), search.to_string());
+                                filtered_authors = filter_authors(&input, search.to_string());
                             }
                             KeyCode::Up => {
                                 if selected != usize::MIN {
@@ -106,13 +106,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
             }
         }
 
-        let lines = render_canvas(
-            &theight,
-            &twith,
-            &search,
-            &selected,
-            filtered_authors.clone(),
-        );
+        let lines = render_canvas(&theight, &twith, &search, &selected, &filtered_authors);
         stdout.queue(terminal::Clear(terminal::ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
         for line in lines.iter() {
@@ -120,16 +114,20 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
             stdout.write_all(line.as_bytes())?;
         }
         stdout.queue(cursor::MoveTo(0, theight))?;
-        stdout.write_all("Usage: <Esc>/<Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
+        stdout.write_all("Usage: <Esc>: Close, <Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
         stdout.flush()?;
 
         thread::sleep(Duration::from_millis(10));
     }
     teardown_ui()?;
-    Ok(input.into_iter().filter(|a| a.staged).collect())
+    if saved {
+        Ok(Some(input.into_iter().filter(|a| a.staged).collect()))
+    } else {
+        Ok(None)
+    }
 }
 
-fn filter_authors(authors: Vec<Author>, search: String) -> Vec<Author> {
+fn filter_authors(authors: &Vec<Author>, search: String) -> Vec<&Author> {
     let search = search.to_lowercase();
     authors
         .into_iter()
@@ -142,14 +140,14 @@ fn render_canvas(
     _twith: &u16,
     search: &str,
     selected: &usize,
-    authors: Vec<Author>,
+    authors: &Vec<&Author>,
 ) -> Vec<String> {
     let mut out = vec![format!("Search: {search}")];
     out.extend(render_authors(authors, selected));
     out
 }
 
-fn render_authors(authors: Vec<Author>, selected: &usize) -> Vec<String> {
+fn render_authors(authors: &Vec<&Author>, selected: &usize) -> Vec<String> {
     authors
         .iter()
         .enumerate()

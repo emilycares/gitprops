@@ -34,11 +34,16 @@ async fn main() {
 
     let existing_authors = format::parse_authors(message);
     let authors = mark_present(authors, existing_authors);
-    let a = finder::ui(authors);
-    if let Ok(a) = a {
-        let message = format::format_commit_message(message, a);
-        println!("{}", message);
-        set_commit_message(commit, message);
+    match finder::ui(authors) {
+        Ok(Some(authors)) => {
+            let message = format::format_commit_message(message, authors);
+            println!("{}", message);
+            set_commit_message(commit, message);
+        }
+        Ok(None) => {
+            println!("Aborted. No commit message was changed")
+        }
+        Err(e) => eprintln!("Got an error in the ui: {:?}", e),
     }
 }
 

@@ -9,7 +9,9 @@ keys = search
 
 space = toggle author
 
-esc/enter = exit UI and do "Co-authored-by" changes
+esc = close
+
+enter = exit UI and do "Co-authored-by" changes
 
 arrow up/down = move the selected item
 
