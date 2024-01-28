@@ -14,3 +14,4 @@ esc/enter = exit UI and do "Co-authored-by" changes
 arrow up/down = move the selected item
 
 Ctrl-r: Remove all checkmarks
+
