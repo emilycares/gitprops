@@ -15,3 +15,6 @@ arrow up/down = move the selected item
 
 Ctrl-r: Remove all checkmarks
 
+# Compatibility
+- linux
+- Windows 10
