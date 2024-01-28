@@ -39,19 +39,17 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
                             KeyCode::Esc => break 'ui,
                             KeyCode::Enter => {
                                 saved = true;
-                                break 'ui
-                            },
-                            KeyCode::Char('r') => {
-                                if m.modifiers.contains(KeyModifiers::CONTROL) {
-                                    input = input
-                                        .into_iter()
-                                        .map(|mut a| {
-                                            a.staged = false;
-                                            a
-                                        })
-                                        .collect();
-                                    filtered_authors = filter_authors(&input, search.to_string());
-                                }
+                                break 'ui;
+                            }
+                            KeyCode::Char('r') if m.modifiers.contains(KeyModifiers::CONTROL) => {
+                                input = input
+                                    .into_iter()
+                                    .map(|mut a| {
+                                        a.staged = false;
+                                        a
+                                    })
+                                    .collect();
+                                filtered_authors = filter_authors(&input, search.to_string());
                             }
                             KeyCode::Char(' ') => {
                                 if let Some(s) = filtered_authors.get(selected) {
@@ -108,13 +106,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
             }
         }
 
-        let lines = render_canvas(
-            &theight,
-            &twith,
-            &search,
-            &selected,
-            &filtered_authors,
-        );
+        let lines = render_canvas(&theight, &twith, &search, &selected, &filtered_authors);
         stdout.queue(terminal::Clear(terminal::ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
         for line in lines.iter() {
@@ -129,9 +121,9 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
     }
     teardown_ui()?;
     if saved {
-      Ok(Some(input.into_iter().filter(|a| a.staged).collect()))
+        Ok(Some(input.into_iter().filter(|a| a.staged).collect()))
     } else {
-      Ok(None)
+        Ok(None)
     }
 }
 
