@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{Ok, Result};
-use crossterm::event::KeyEventKind;
+use crossterm::event::{KeyEventKind, KeyModifiers};
 use crossterm::{
     cursor::{self, Hide, Show},
     event::{poll, Event},
@@ -36,6 +36,19 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
                         match m.code {
                             KeyCode::Esc => break 'ui,
                             KeyCode::Enter => break 'ui,
+                            KeyCode::Char('r') => {
+                                if m.modifiers.contains(KeyModifiers::CONTROL) {
+                                    input = input
+                                        .into_iter()
+                                        .map(|mut a| {
+                                            a.staged = false;
+                                            a
+                                        })
+                                        .collect();
+                                    filtered_authors =
+                                        filter_authors(input.clone(), search.to_string());
+                                }
+                            }
                             KeyCode::Char(' ') => {
                                 if let Some(s) = filtered_authors.get(selected) {
                                     input = input
@@ -107,7 +120,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Vec<Author>> {
             stdout.write_all(line.as_bytes())?;
         }
         stdout.queue(cursor::MoveTo(0, theight))?;
-        stdout.write_all("Usage: <Esc>/<Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover".as_bytes())?;
+        stdout.write_all("Usage: <Esc>/<Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
         stdout.flush()?;
 
         thread::sleep(Duration::from_millis(10));

@@ -34,11 +34,7 @@ pub struct StorageAuthor {
 
 impl From<StorageAuthor> for Author {
     fn from(value: StorageAuthor) -> Self {
-        Self {
-            name: value.name,
-            email: value.email,
-            staged: false,
-        }
+        Self::new(&value.name, &value.email)
     }
 }
 
@@ -56,5 +52,15 @@ impl ToString for Author {
             false => " ",
         };
         format!("[{}] {} {}", staged, self.name, self.email)
+    }
+}
+
+impl Author {
+    pub fn new(name: &str, email: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            email: email.to_string(),
+            staged: false,
+        }
     }
 }
