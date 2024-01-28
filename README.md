@@ -15,6 +15,12 @@ arrow up/down = move the selected item
 
 Ctrl-r: Remove all checkmarks
 
-# Compatibility
-- linux
+## Compatibility
+- Linux
 - Windows 10
+
+## Getting started
+``` command
+cargo build --release
+```
+And add it to your PATH.
