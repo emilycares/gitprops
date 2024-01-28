@@ -122,7 +122,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
             stdout.write_all(line.as_bytes())?;
         }
         stdout.queue(cursor::MoveTo(0, theight))?;
-        stdout.write_all("Usage: <Esc>: Close <Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
+        stdout.write_all("Usage: <Esc>: Close, <Enter>: Edit and close, <space>: Stage author, arrow up/down: Move hover, Ctrl-r: Remove all checkmarks".as_bytes())?;
         stdout.flush()?;
 
         thread::sleep(Duration::from_millis(10));
