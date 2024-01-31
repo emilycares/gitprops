@@ -1,3 +1,4 @@
+use crate::finder::FinderItem;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +39,16 @@ impl From<StorageAuthor> for Author {
     }
 }
 
+impl FinderItem for Author {
+    fn search_include(&self, search: &str) -> bool {
+        return self.name.to_lowercase().contains(search);
+    }
+
+    fn initial_seleted(&self) -> bool {
+        self.staged
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Author {
     pub name: String,
@@ -47,11 +58,7 @@ pub struct Author {
 
 impl ToString for Author {
     fn to_string(&self) -> String {
-        let staged = match self.staged {
-            true => "X",
-            false => " ",
-        };
-        format!("[{}] {} {}", staged, self.name, self.email)
+        format!("{} {}", self.name, self.email)
     }
 }
 

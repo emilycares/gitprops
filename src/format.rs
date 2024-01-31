@@ -7,7 +7,7 @@ pub fn format_commit_message(message: &str, authors: Vec<Author>) -> String {
         .collect();
 
     if !authors.is_empty() {
-      msg.push('\n');
+        msg.push('\n');
     }
     for author in authors {
         msg.push_str(&format!(

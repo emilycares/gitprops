@@ -17,16 +17,56 @@ use crossterm::{
     ExecutableCommand, QueueableCommand,
 };
 
-use crate::config::Author;
+pub trait FinderItem {
+    fn search_include(&self, search: &str) -> bool;
+    fn initial_seleted(&self) -> bool;
+}
 
-pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
+#[derive(Clone)]
+pub struct StageAble<T: Clone> {
+    pub staged: bool,
+    pub data: T,
+}
+
+impl<T: ToString + Clone> ToString for StageAble<T> {
+    fn to_string(&self) -> String {
+        let staged = match self.staged {
+            true => "X",
+            false => " ",
+        };
+        format!("[{}] {}", staged, self.data.to_string())
+    }
+}
+
+impl<T: Clone> StageAble<T> {
+    pub fn new(data: T) -> StageAble<T> {
+        StageAble {
+            staged: false,
+            data,
+        }
+    }
+}
+
+pub fn ui<T>(input: Vec<T>) -> Result<Option<Vec<T>>>
+where
+    T: ToString + FinderItem + Clone + PartialEq,
+{
+    let mut input: Vec<StageAble<T>> = input
+        .into_iter()
+        .map(|i| StageAble::new(i))
+        .map(|c| {
+            let mut init_staged = c;
+            init_staged.staged = init_staged.data.initial_seleted();
+            init_staged
+        })
+        .collect();
     let (mut theight, mut twith) = terminal::size()?;
     setup_ui()?;
     let mut stdout = stdout();
 
     let mut search = String::new();
-    let bind_authors = input.clone();
-    let mut filtered_authors = filter_authors(&bind_authors, search.to_string());
+    let bind_items = input.clone();
+    let mut filtered_items = filter_items(&bind_items, &search);
     let mut selected: usize = 0;
     let mut saved = false;
 
@@ -44,32 +84,32 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
                             KeyCode::Char('r') if m.modifiers.contains(KeyModifiers::CONTROL) => {
                                 input = input
                                     .into_iter()
-                                    .map(|mut a| {
-                                        a.staged = false;
-                                        a
+                                    .map(|mut i| {
+                                        i.staged = false;
+                                        i
                                     })
                                     .collect();
-                                filtered_authors = filter_authors(&input, search.to_string());
+                                filtered_items = filter_items(&input, &search);
                             }
                             KeyCode::Char(' ') => {
-                                if let Some(s) = filtered_authors.get(selected) {
+                                if let Some(s) = filtered_items.get(selected) {
                                     input = input
                                         .clone()
                                         .into_iter()
-                                        .map(|mut a| {
-                                            if a.name == s.name && a.email == s.email {
-                                                a.staged = !a.staged;
+                                        .map(|mut i| {
+                                            if i.data == s.data {
+                                                i.staged = !i.staged;
                                             }
-                                            a
+                                            i
                                         })
                                         .collect();
-                                    filtered_authors = filter_authors(&input, search.to_string());
+                                    filtered_items = filter_items(&input, &search);
                                 }
                             }
                             KeyCode::Char(c) => {
                                 search.push(c);
-                                filtered_authors = filter_authors(&input, search.to_string());
-                                let len = filtered_authors.len();
+                                filtered_items = filter_items(&input, &search);
+                                let len = filtered_items.len();
                                 if len > 1 {
                                     let last = len - 1;
                                     if selected > last {
@@ -82,7 +122,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
                             }
                             KeyCode::Backspace => {
                                 search.pop();
-                                filtered_authors = filter_authors(&input, search.to_string());
+                                filtered_items = filter_items(&input, &search);
                             }
                             KeyCode::Up => {
                                 if selected != usize::MIN {
@@ -90,7 +130,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
                                 }
                             }
                             KeyCode::Down => {
-                                if selected != usize::MAX && selected < filtered_authors.len() - 1 {
+                                if selected != usize::MAX && selected < filtered_items.len() - 1 {
                                     selected = selected.saturating_add(1);
                                 }
                             }
@@ -106,7 +146,7 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
             }
         }
 
-        let lines = render_canvas(&theight, &twith, &search, &selected, &filtered_authors);
+        let lines = render_canvas(&theight, &twith, &search, &selected, &filtered_items);
         stdout.queue(terminal::Clear(terminal::ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
         for line in lines.iter() {
@@ -121,38 +161,53 @@ pub fn ui(mut input: Vec<Author>) -> Result<Option<Vec<Author>>> {
     }
     teardown_ui()?;
     if saved {
-        Ok(Some(input.into_iter().filter(|a| a.staged).collect()))
+        Ok(Some(
+            input
+                .into_iter()
+                .filter(|a| a.staged)
+                .map(|s| s.data)
+                .collect(),
+        ))
     } else {
         Ok(None)
     }
 }
 
-fn filter_authors(authors: &Vec<Author>, search: String) -> Vec<&Author> {
+fn filter_items<'a, T>(items: &'a Vec<StageAble<T>>, search: &'a str) -> Vec<&'a StageAble<T>>
+where
+    T: FinderItem + Clone,
+{
     let search = search.to_lowercase();
-    authors
+    items
         .into_iter()
-        .filter(|c| c.name.to_lowercase().contains(&search))
+        .filter(|c| c.data.search_include(&search))
         .collect()
 }
 
-fn render_canvas(
+fn render_canvas<T>(
     _theight: &u16,
     _twith: &u16,
     search: &str,
     selected: &usize,
-    authors: &Vec<&Author>,
-) -> Vec<String> {
+    items: &Vec<&StageAble<T>>,
+) -> Vec<String>
+where
+    T: ToString + Clone,
+{
     let mut out = vec![format!("Search: {search}")];
-    out.extend(render_authors(authors, selected));
+    out.extend(render_items(items, selected));
     out
 }
 
-fn render_authors(authors: &Vec<&Author>, selected: &usize) -> Vec<String> {
-    authors
+fn render_items<T>(items: &Vec<&StageAble<T>>, selected: &usize) -> Vec<String>
+where
+    T: ToString + Clone,
+{
+    items
         .iter()
         .enumerate()
-        .map(|(i, author)| {
-            let mut line = author.to_string();
+        .map(|(i, item)| {
+            let mut line = item.to_string();
             if &i == selected {
                 line = line.green().to_string();
             }
